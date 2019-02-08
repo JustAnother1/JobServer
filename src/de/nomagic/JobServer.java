@@ -111,7 +111,8 @@ public class JobServer extends Thread
             jobs.skip(skip);
         }
     }
-
+    
+    @Override
     public void run()
     {
         boolean shouldRun = true;
@@ -212,7 +213,7 @@ public class JobServer extends Thread
         }
 
         // Shutdown
-        System.out.println("Send out " + numJobsSendOut + "Jobs.");
+        System.out.println("Send out " + numJobsSendOut + " Jobs.");
         cs.printStatistsics();
         System.out.println("Done!");
         System.exit(0);

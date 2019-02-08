@@ -16,15 +16,26 @@ public class ClientStatistic
     {
         Iterator<String> it = stat.keySet().iterator();
         System.out.println("Client Name : Number of Jobs");
+        int sum = 0;
         while(it.hasNext())
         {
             String entryKey = it.next();
             Integer cnt = stat.get(entryKey);
             Integer act = activity.get(entryKey);
+            // NULL => 0
+            if(null == cnt)
+            {
+            	cnt = 0;
+            }
+            if(null == act)
+            {
+            	act = 0;
+            }
             String msg = String.format("%30s : %10d (%3d)", entryKey, cnt, act);
-            //System.out.println(entryKey + " : " + cnt);
+            sum = sum + cnt;
             System.out.println(msg);
         }
+        System.out.println("total : " + sum);
         System.out.println("End of List");
         activity.clear();
     }
