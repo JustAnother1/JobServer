@@ -11,7 +11,7 @@ So running with ant installed should be a simple:
 
 +$ ant+
 
-+$ java -jar StrategicPlayer.jar+
++$ java -jar JobServer.jar+
 
 
 
