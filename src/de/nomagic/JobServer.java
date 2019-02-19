@@ -21,7 +21,7 @@ public class JobServer extends Thread
     private int ServerPort = 4321;
     private JobQueue jobs;
 
-    private final static long REPORT_INTERVALL = 10000;
+    private final static long REPORT_INTERVALL = 30000;  // ms
 
     public JobServer()
     {
