@@ -1,11 +1,10 @@
-Job Server
----------
+= Job Server
 
 Provides a list of Jobs to clients.
 
 
-HOW TO BUILD?
--------------
+== HOW TO BUILD?
+
 I've provided a simple ant build script.
 So running with ant installed should be a simple:
 
@@ -14,9 +13,54 @@ So running with ant installed should be a simple:
 +$ java -jar JobServer.jar+
 
 
+== Protocol
 
-LICENSE
--------
+The communication is done over a not encrypted TCP connection. In a request/ response matter.
+
+The client sends a request for the next job. The server replies with the job description.
+
+=== version 1
+
+==== request
+In version one the client request is either "getNextJob\n" to request a job without identifying the client. Or it is "login:" + ClientId + "\n" with ClientId being a string that describes the client. Mostly some kind of name of the client.
+
+==== response
+The server response is a single line. The content and format of that line depend on the job and job type.
+
+This version does not support more than one job type. The client therefore needs to already know the job type and can with that knowledge parse the job description accordingly.
+
+=== Version 2
+
+==== request
+To distinguish this version from Version one the client Request starts with the characters "2:". This can then be followed up by one or more data sections. Each data sections contains of a type and a value. The type and value are strings. The format of a data section is <type>=<Value>: Each request ends with a newline character.
+
+Therefore valid requests are:
+* "2:\n"  - anonymous request of version 2
+* "2:name=bob:\n" - request by a client with the property name having the value Bob.
+* "2:name=bob:hw=RaspberryPi:\n" - This time the client bob also specifies that it is a RaspberryPi.
+
+The provided details can be used by the server to choose the best fitting job for that client.
+
+==== response
+
+The server response starts with "2:". The next section represents the status of the response. These stati are defined:
+
+.Table: response stati
+[options="header"]
+|========================================
+| value | description
+| 0     | OK
+| 1     | no Job available
+| 2     | server is busy, ask again later
+|========================================
+
+after the status data sections (as on requests) can follow. The response ends with a newline character.
+
+Examples:
+"2:2\n"  - server is busy
+"2:0:type=convert:dataId=746:\n" - the job is to convert the data identified by "746"
+
+== LICENSE
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
