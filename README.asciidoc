@@ -41,6 +41,14 @@ Therefore valid requests are:
 
 The provided details can be used by the server to choose the best fitting job for that client.
 
+===== add Jobs
+It is also possible for the Client to add a new Job to the Queue instead of requesting a Job from the Queue.
+To add a job the Request starts with "2:add:" followed by one or more data sections.
+
+Therefore valid requests are:
+* "2:add:type=analyze:data=125864596:\n  - add a job of type "analyze" with the data value "125864596"
+
+
 ==== response
 
 The server response starts with "2:". The next section represents the status of the response. These stati are defined:
@@ -52,6 +60,7 @@ The server response starts with "2:". The next section represents the status of 
 | 0     | OK
 | 1     | no Job available
 | 2     | server is busy, ask again later
+| 3     | could not add Job
 |========================================
 
 after the status data sections (as on requests) can follow. The response ends with a newline character.

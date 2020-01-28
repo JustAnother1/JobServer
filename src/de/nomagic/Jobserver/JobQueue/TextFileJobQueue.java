@@ -22,6 +22,13 @@ public class TextFileJobQueue extends BaseJobQueue
         }
     }
 
+    @Override
+    public String getNextJob(String type)
+    {
+        // TODO type = filename?, ignore for now
+        return getNextJob();
+    }
+
     public String getNextJob()
     {
         if(null == list)
@@ -56,24 +63,10 @@ public class TextFileJobQueue extends BaseJobQueue
     }
 
     @Override
-    public void skip(long num)
+    public boolean addJob(String type, String Job)
     {
-        if(null == list)
-        {
-            return;
-        }
-        try
-        {
-            for(long l = 0; l < num; l++)
-            {
-                list.readLine();
-            }
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-            list = null;
-        }
+        // not possible
+        return false;
     }
 
 }

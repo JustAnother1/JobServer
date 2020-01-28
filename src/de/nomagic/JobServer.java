@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import de.nomagic.Jobserver.JobQueue.InMemoryJobQueue;
 import de.nomagic.Jobserver.JobQueue.JobQueue;
 import de.nomagic.Jobserver.JobQueue.TextFileFolderJobQueue;
 import de.nomagic.Jobserver.JobQueue.TextFileJobQueue;
@@ -16,7 +17,6 @@ import de.nomagic.Jobserver.JobQueue.TextFileJobQueue;
 public class JobServer extends Thread
 {
     private String JobFileName = "neu.txt";
-    private boolean hasJobDir = false;
     private String JobFolderName = ".";
     private int ServerPort = 4321;
     private JobQueue jobs;
@@ -52,6 +52,8 @@ public class JobServer extends Thread
 
     public void getConfigFromCommandLine(String[] args)
     {
+        boolean hasJobDir = false;
+        boolean hasJobFile = false;
         long skip = 0;
         for(int i = 0; i < args.length; i++)
         {
@@ -59,6 +61,7 @@ public class JobServer extends Thread
             {
                 if(true == "-jobfile".equals(args[i]))
                 {
+                    hasJobFile = true;
                     i++;
                     JobFileName = args[i];
                 }
@@ -102,16 +105,23 @@ public class JobServer extends Thread
         {
             jobs = new TextFileFolderJobQueue(JobFolderName);
         }
-        else
+        else if(true == hasJobFile)
         {
             jobs = new TextFileJobQueue(JobFileName);
         }
+        else
+        {
+            jobs = new InMemoryJobQueue();
+        }
         if(0 < skip)
         {
-            jobs.skip(skip);
+            for(int i = 0; i < skip; i++)
+            {
+                jobs.getNextJob();
+            }
         }
     }
-    
+
     @Override
     public void run()
     {
@@ -122,9 +132,7 @@ public class JobServer extends Thread
 
         if(false == jobs.hasMoreJobs())
         {
-            // another Job well done,...
             System.out.println("No Jobs available!");
-            return;
         }
 
         ServerSocket welcomeSocket;
@@ -149,6 +157,7 @@ public class JobServer extends Thread
                 String cmd = fromClient.readLine();
                 if(null != cmd)
                 {
+                    // Version 1:
                     if(true == "getNextJob".equals(cmd))
                     {
                         String job = jobs.getNextJob();
@@ -181,6 +190,42 @@ public class JobServer extends Thread
                             toClient.writeBytes(job);
                             numJobsSendOut++;
                             cs.addJob(clientId);
+                        }
+                    }
+                    else if(true == cmd.startsWith("2:"))
+                    {
+                        RequestVersion2 req = new RequestVersion2(cmd);
+                        if(true == req.isAddJob())
+                        {
+                            // add a new Job
+                            if(true == jobs.addJob(req.getType(), req.getJobSpec()))
+                            {
+                                System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
+                                        + " : Received a new Job from " + req.getClientId());
+                                System.out.println("Job Type = " + req.getType()  + " Spec : " + req.getJobSpec());
+                                toClient.writeBytes("2:0:\n");
+                            }
+                            else
+                            {
+                                toClient.writeBytes("2:3:\n");
+                            }
+                        }
+                        else
+                        {
+                            // get next Job
+                             String job = jobs.getNextJob();
+                             if((null == job) || (1 > job.length()))
+                             {
+                                 toClient.writeBytes("2:1:\n");
+                             }
+                             else
+                             {
+                                 toClient.writeBytes("2:0:" + job + "\n");
+                                 System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
+                                         + " : " + numJobsSendOut +  " : Giving a Job to " + req.getClientId());
+                                 numJobsSendOut++;
+                                 cs.addJob(req.getClientId());
+                             }
                         }
                     }
                     else

@@ -4,19 +4,29 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 
-public class TextFileFolderJobQueue implements JobQueue
+public class TextFileFolderJobQueue extends BaseJobQueue
 {
     private int fidx;
     private File[] jobFiles;
     private BufferedReader curFile = null;
+    private String FolderName;
 
     public TextFileFolderJobQueue(String jobFolderName)
     {
-        jobFiles = findeFiles(jobFolderName);
+        FolderName = jobFolderName;
+        jobFiles = findFiles(jobFolderName);
         fidx = 0;
+    }
+
+    @Override
+    public String getNextJob(String type)
+    {
+        // TODO type = filename?, ignore for now
+        return getNextJob();
     }
 
     @Override
@@ -92,7 +102,7 @@ public class TextFileFolderJobQueue implements JobQueue
         }
     }
 
-    private File[] findeFiles(String dirName)
+    private File[] findFiles(String dirName)
     {
         File dir = new File(dirName);
 
@@ -107,12 +117,36 @@ public class TextFileFolderJobQueue implements JobQueue
     }
 
     @Override
-    public void skip(long num)
+    public boolean addJob(String type, String Job)
     {
-        for(long l = 0; l < num; l++)
+        boolean res = false;
+        FileWriter out = null;
+        try
         {
-            getNextJob();
+            out = new FileWriter(FolderName + '/' + type + "_jobs.new", true);
+            out.write(Job + "\n");
+            res = true;
         }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        finally
+        {
+            if(null != out)
+            {
+                try
+                {
+                    out.close();
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                    res = false;
+                }
+            }
+        }
+        return res;
     }
 
 }
