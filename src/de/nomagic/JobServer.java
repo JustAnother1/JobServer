@@ -238,6 +238,7 @@ public class JobServer extends Thread
                     {
                         nextReport = now + REPORT_INTERVALL;
                         cs.printStatistsics();
+                        jobs.printStatistsics();
                     }
                 }
                 toClient.flush();

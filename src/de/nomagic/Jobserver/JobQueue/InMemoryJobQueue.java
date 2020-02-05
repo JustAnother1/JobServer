@@ -90,4 +90,18 @@ public class InMemoryJobQueue extends BaseJobQueue
         return true;
     }
 
+    @Override
+    public void printStatistsics()
+    {
+        System.out.println("Queue Type = in memory");
+        Set<String> keys = data.keySet();
+        Iterator<String> it = keys.iterator();
+        while(true == it.hasNext())
+        {
+            String type = it.next();
+            ArrayList<String> jobs = data.get(type);
+            System.out.println("Jobs remaining : " + jobs.size() + " of type " + type);
+        }
+    }
+
 }

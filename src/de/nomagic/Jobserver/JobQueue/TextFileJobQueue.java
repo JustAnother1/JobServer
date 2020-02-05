@@ -69,4 +69,10 @@ public class TextFileJobQueue extends BaseJobQueue
         return false;
     }
 
+    @Override
+    public void printStatistsics()
+    {
+        System.out.println("Queue Type = single text file");
+    }
+
 }
