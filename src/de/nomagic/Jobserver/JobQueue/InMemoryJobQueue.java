@@ -3,6 +3,7 @@ package de.nomagic.Jobserver.JobQueue;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.Set;
 
 public class InMemoryJobQueue extends BaseJobQueue
@@ -55,6 +56,20 @@ public class InMemoryJobQueue extends BaseJobQueue
             return "";
         }
         Set<String> keys = data.keySet();
+        if( 1 < keys.size())
+        {
+            Object[] types = keys.toArray();
+            for(int i = 0; i < types.length; i++)
+            {
+                String typ = (String) types[new Random().nextInt(types.length)];
+                res = getNextJob(typ);
+                if(0 < res.length())
+                {
+                    return res;
+                }
+            }
+        }
+        // we had really bad luck or only one entry
         Iterator<String> it = keys.iterator();
         while(true == it.hasNext())
         {
