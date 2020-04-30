@@ -6,6 +6,7 @@ public class RequestVersion2
     private String JobSpec = "";
     private String name = "";
     private String type = "";
+    private String[] parts;
 
 
     public RequestVersion2(String request)
@@ -31,6 +32,22 @@ public class RequestVersion2
                 type = type.trim();
             }
         }
+    }
+
+    public String getAttribute(String which)
+    {
+        for(int i = 0; i < parts.length; i++)
+        {
+            String line = parts[i];
+            line = line.trim();
+            if(line.startsWith(which))
+            {
+                String res = line.substring(line.indexOf('=') + 1);
+                res = res.trim();
+                return res;
+            }
+        }
+        return "";
     }
 
     public boolean isAddJob()

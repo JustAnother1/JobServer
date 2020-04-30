@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import de.nomagic.Jobserver.ResultReporter;
 import de.nomagic.Jobserver.JobQueue.InMemoryJobQueue;
 import de.nomagic.Jobserver.JobQueue.JobQueue;
 import de.nomagic.Jobserver.JobQueue.TextFileFolderJobQueue;
@@ -16,12 +17,19 @@ import de.nomagic.Jobserver.JobQueue.TextFileJobQueue;
 
 public class JobServer extends Thread
 {
+    private final static long REPORT_INTERVALL = 30000;  // ms
+
+
     private String JobFileName = "neu.txt";
     private String JobFolderName = ".";
     private int ServerPort = 4321;
-    private JobQueue jobs;
+    private JobQueue jobs = null;
+    private boolean shouldRun = true;
+    private int numJobsSendOut = 0;
+    private DataOutputStream toClient = null;
+    private ClientStatistic cs = new ClientStatistic();
+    private ResultReporter rr = new ResultReporter();
 
-    private final static long REPORT_INTERVALL = 30000;  // ms
 
     public JobServer()
     {
@@ -122,12 +130,93 @@ public class JobServer extends Thread
         }
     }
 
+    void parse_v1_request(String cmd) throws IOException
+    {
+        // Version 1:
+        if(true == "getNextJob".equals(cmd))
+        {
+            String job = jobs.getNextJob();
+            if(null == job)
+            {
+                System.out.println("No more Jobs available!");
+                shouldRun = false;
+            }
+            else
+            {
+                toClient.writeBytes(job);
+                numJobsSendOut++;
+                cs.addJob("Anonymous");
+            }
+        }
+        else if(true == cmd.startsWith("login:"))
+        {
+            String clientId = cmd.substring(6);
+            String job = jobs.getNextJob();
+            if(null == job)
+            {
+                System.out.println("No more Jobs available!");
+                shouldRun = false;
+            }
+            else
+            {
+                System.out.print(new SimpleDateFormat("HH.mm.ss").format(new Date())
+                        + " : " + numJobsSendOut
+                        + " : Giving Job to " + clientId + "\n");
+                toClient.writeBytes(job);
+                numJobsSendOut++;
+                cs.addJob(clientId);
+            }
+        }
+        else
+        {
+            // invalid command
+            toClient.writeBytes("ERROR: invalid Command !!!");
+        }
+    }
+
+    void parse_v2_request(String cmd) throws IOException
+    {
+        RequestVersion2 req = new RequestVersion2(cmd);
+        if(true == req.isAddJob())
+        {
+            // add a new Job
+            if(true == jobs.addJob(req.getType(), req.getJobSpec()))
+            {
+                System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
+                        + " : Received a new Job from " + req.getClientId());
+                System.out.println("Job Type = " + req.getType()  + " Spec : " + req.getJobSpec());
+                toClient.writeBytes("2:0:\n");
+            }
+            else
+            {
+                toClient.writeBytes("2:3:\n");
+            }
+        }
+        else
+        {
+            // finished last job?
+            rr.report(req);
+            // get next Job
+            String job = jobs.getNextJob();
+            if((null == job) || (1 > job.length()))
+            {
+                toClient.writeBytes("2:1:\n");
+            }
+            else
+            {
+                rr.nextJob(req, job);
+                toClient.writeBytes("2:0:" + job + "\n");
+                System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
+                        + " : " + numJobsSendOut +  " : Giving a Job to " + req.getClientId());
+                numJobsSendOut++;
+                cs.addJob(req.getClientId());
+            }
+        }
+    }
+
     @Override
     public void run()
     {
-        boolean shouldRun = true;
-        int numJobsSendOut = 0;
-        ClientStatistic cs = new ClientStatistic();
         // Startup
 
         if(false == jobs.hasMoreJobs())
@@ -153,85 +242,18 @@ public class JobServer extends Thread
             {
                 final Socket connectionSocket = welcomeSocket.accept();
                 BufferedReader fromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-                DataOutputStream toClient = new DataOutputStream(connectionSocket.getOutputStream());
+                toClient = new DataOutputStream(connectionSocket.getOutputStream());
                 String cmd = fromClient.readLine();
                 if(null != cmd)
                 {
-                    // Version 1:
-                    if(true == "getNextJob".equals(cmd))
+                    if(true == cmd.startsWith("2:"))
                     {
-                        String job = jobs.getNextJob();
-                        if(null == job)
-                        {
-                            System.out.println("No more Jobs available!");
-                            shouldRun = false;
-                        }
-                        else
-                        {
-                            toClient.writeBytes(job);
-                            numJobsSendOut++;
-                            cs.addJob("Anonymous");
-                        }
-                    }
-                    else if(true == cmd.startsWith("login:"))
-                    {
-                        String clientId = cmd.substring(6);
-                        String job = jobs.getNextJob();
-                        if(null == job)
-                        {
-                            System.out.println("No more Jobs available!");
-                            shouldRun = false;
-                        }
-                        else
-                        {
-                            System.out.print(new SimpleDateFormat("HH.mm.ss").format(new Date())
-                                    + " : " + numJobsSendOut
-                                    + " : Giving Job to " + clientId + "\n");
-                            toClient.writeBytes(job);
-                            numJobsSendOut++;
-                            cs.addJob(clientId);
-                        }
-                    }
-                    else if(true == cmd.startsWith("2:"))
-                    {
-                        RequestVersion2 req = new RequestVersion2(cmd);
-                        if(true == req.isAddJob())
-                        {
-                            // add a new Job
-                            if(true == jobs.addJob(req.getType(), req.getJobSpec()))
-                            {
-                                System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
-                                        + " : Received a new Job from " + req.getClientId());
-                                System.out.println("Job Type = " + req.getType()  + " Spec : " + req.getJobSpec());
-                                toClient.writeBytes("2:0:\n");
-                            }
-                            else
-                            {
-                                toClient.writeBytes("2:3:\n");
-                            }
-                        }
-                        else
-                        {
-                            // get next Job
-                             String job = jobs.getNextJob();
-                             if((null == job) || (1 > job.length()))
-                             {
-                                 toClient.writeBytes("2:1:\n");
-                             }
-                             else
-                             {
-                                 toClient.writeBytes("2:0:" + job + "\n");
-                                 System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
-                                         + " : " + numJobsSendOut +  " : Giving a Job to " + req.getClientId());
-                                 numJobsSendOut++;
-                                 cs.addJob(req.getClientId());
-                             }
-                        }
+                        parse_v2_request(cmd);
                     }
                     else
                     {
-                        // invalid command
-                        toClient.writeBytes("ERROR: invalid Command !!!");
+                        // invalid command or V1
+                        parse_v1_request(cmd);
                     }
                     now = System.currentTimeMillis();
                     if(now > nextReport)
