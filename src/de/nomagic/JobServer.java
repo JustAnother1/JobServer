@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import de.nomagic.Jobserver.ResultReporter;
+import de.nomagic.Jobserver.JobQueue.BruteForceJobQueue;
 import de.nomagic.Jobserver.JobQueue.InMemoryJobQueue;
 import de.nomagic.Jobserver.JobQueue.JobQueue;
 import de.nomagic.Jobserver.JobQueue.TextFileFolderJobQueue;
@@ -56,10 +57,16 @@ public class JobServer extends Thread
         System.err.println("     : use the given port instead of the default port " + ServerPort);
         System.err.println("-skip <number of jobs>");
         System.err.println("     : start executing jobs atthe defined position in the job list");
+        System.err.println("-bf <type> <start value> <increment>");
+        System.err.println("     : scan a large key space increment by increment");
     }
 
     public void getConfigFromCommandLine(String[] args)
     {
+        String JobType = "";
+        String startValue = "";
+        String increment = "";
+        boolean isBruteForce = false;
         boolean hasJobDir = false;
         boolean hasJobFile = false;
         long skip = 0;
@@ -89,6 +96,16 @@ public class JobServer extends Thread
                     i++;
                     skip = Long.parseLong(args[i]);
                 }
+                else if(true == "-bf".equals(args[i]))
+                {
+                    i++;
+                    JobType = args[i];
+                    i++;
+                    startValue = args[i];
+                    i++;
+                    increment = args[i];
+                    isBruteForce = true;
+                }
                 else if(true == "-h".equals(args[i]))
                 {
                     printHelpText();
@@ -116,6 +133,10 @@ public class JobServer extends Thread
         else if(true == hasJobFile)
         {
             jobs = new TextFileJobQueue(JobFileName);
+        }
+        else if(true == isBruteForce)
+        {
+            jobs = new BruteForceJobQueue(JobType, startValue, increment);
         }
         else
         {
@@ -191,6 +212,11 @@ public class JobServer extends Thread
             {
                 toClient.writeBytes("2:3:\n");
             }
+        }
+        else if(true == req.isJobResult())
+        {
+            rr.report(req);
+            toClient.writeBytes("2:0:\n");
         }
         else
         {

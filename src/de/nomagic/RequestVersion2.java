@@ -2,6 +2,7 @@ package de.nomagic;
 
 public class RequestVersion2
 {
+    private boolean isJobREsult = false;
     private boolean isAddJob = false;
     private String JobSpec = "";
     private String name = "";
@@ -11,12 +12,21 @@ public class RequestVersion2
 
     public RequestVersion2(String request)
     {
+                                     //123456
         if(true == request.startsWith("2:add:"))
         {
             isAddJob = true;
             JobSpec = request.substring(6);
+            request = JobSpec;
         }
-        String[] parts = request.split(":");
+                                     //123456789
+        if(true == request.startsWith("2:result:"))
+        {
+            isJobREsult = true;
+            JobSpec = request.substring(9);
+            request = JobSpec;
+        }
+        parts = request.split(":");
         for(int i = 0; i < parts.length; i++)
         {
             String line = parts[i];
@@ -34,6 +44,11 @@ public class RequestVersion2
         }
     }
 
+    public String[] getAllParts()
+    {
+        return parts;
+    }
+
     public String getAttribute(String which)
     {
         for(int i = 0; i < parts.length; i++)
@@ -44,7 +59,11 @@ public class RequestVersion2
             {
                 String res = line.substring(line.indexOf('=') + 1);
                 res = res.trim();
-                return res;
+                if(0 < res.length())
+                {
+                    return res;
+                }
+                // else continue search
             }
         }
         return "";
@@ -53,6 +72,11 @@ public class RequestVersion2
     public boolean isAddJob()
     {
         return isAddJob;
+    }
+
+    public boolean isJobResult()
+    {
+        return isJobREsult;
     }
 
     public String getType()
