@@ -243,6 +243,9 @@ public class JobServer extends Thread
             }
             else
             {
+                System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
+                        + " : Failed to add a new Job from " + req.getClientId());
+                System.out.println("Job Type = " + req.getType()  + " Spec : " + req.getJobSpec());
                 toClient.writeBytes("2:3:\n");
             }
         }
