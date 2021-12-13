@@ -30,6 +30,7 @@ public class JobServer extends Thread
     private DataOutputStream toClient = null;
     private ClientStatistic cs = new ClientStatistic();
     private ResultReporter rr = new ResultReporter();
+    private ServerSocket welcomeSocket;
 
 
     public JobServer()
@@ -40,6 +41,38 @@ public class JobServer extends Thread
     {
         JobServer m = new JobServer();
         m.getConfigFromCommandLine(args);
+
+        Runtime.getRuntime().addShutdownHook(
+            new Thread()
+            {
+                public void run()
+                {
+                    System.out.println("Shutting down ...");
+                    m.close();
+                    m.shouldRun = false;
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    try {
+                        m.welcomeSocket.close();
+                    } catch (IOException e1) {
+                        // TODO Auto-generated catch block
+                        e1.printStackTrace();
+                    }
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    System.out.println("closed.");
+                }
+            }
+        );
+
         m.start();
     }
 
@@ -250,7 +283,6 @@ public class JobServer extends Thread
             System.out.println("No Jobs available!");
         }
 
-        ServerSocket welcomeSocket;
         try
         {
             welcomeSocket = new ServerSocket(ServerPort);
@@ -294,7 +326,10 @@ public class JobServer extends Thread
             }
             catch(IOException e)
             {
-                e.printStackTrace();
+                if(true == shouldRun)
+                {
+                    e.printStackTrace();
+                }
             }
         }
         try
@@ -307,10 +342,16 @@ public class JobServer extends Thread
         }
 
         // Shutdown
-        System.out.println("Send out " + numJobsSendOut + " Jobs.");
-        cs.printStatistsics();
+        close();
         System.out.println("Done!");
         System.exit(0);
+    }
+
+    protected void close()
+    {
+        jobs.close();
+        System.out.println("Send out " + numJobsSendOut + " Jobs.");
+        cs.printStatistsics();
     }
 
 }

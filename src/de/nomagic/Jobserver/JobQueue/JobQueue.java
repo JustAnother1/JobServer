@@ -7,4 +7,5 @@ public interface JobQueue
     String getNextJob(String type);
     boolean hasMoreJobs();
     void printStatistsics();
+    void close();
 }

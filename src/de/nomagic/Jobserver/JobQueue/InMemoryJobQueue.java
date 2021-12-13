@@ -1,5 +1,11 @@
 package de.nomagic.Jobserver.JobQueue;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -8,12 +14,42 @@ import java.util.Set;
 
 public class InMemoryJobQueue extends BaseJobQueue
 {
+    public static final String unfinishedJobsFileName = "inmemoryJobs.txt";
     private HashMap<String,ArrayList<String>> data = new HashMap<String,ArrayList<String>>();
     private int numJobs = 0;
 
     public InMemoryJobQueue()
     {
-        // Nothing to do here
+        // check if jobs file exists
+        // load all jobs from that file
+
+        File f = new File(unfinishedJobsFileName);
+
+        if(f.exists())
+        {
+            try
+            {
+                BufferedReader list = new BufferedReader(new FileReader(f));
+                String job = list.readLine();
+                while(null != job)
+                {
+                    String type = job.substring(0, job.indexOf(':'));
+                    String desc = job.substring(job.indexOf(':'));
+                    addJob(type, desc);
+                    job = list.readLine();
+                }
+                list.close();
+            }
+            catch(FileNotFoundException e)
+            {
+                e.printStackTrace();
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        // else : no unfinished Jobs
     }
 
     @Override
@@ -116,6 +152,52 @@ public class InMemoryJobQueue extends BaseJobQueue
             String type = it.next();
             ArrayList<String> jobs = data.get(type);
             System.out.println("Jobs remaining : " + jobs.size() + " of type " + type);
+        }
+    }
+
+    @Override
+    public void close()
+    {
+        if(hasMoreJobs())
+        {
+            FileWriter out = null;
+            try
+            {
+                out = new FileWriter(unfinishedJobsFileName, false);
+                Set<String> keys = data.keySet();
+                Iterator<String> it = keys.iterator();
+                while(true == it.hasNext())
+                {
+                    String type = it.next();
+                    String descr = null;
+                    do {
+                        descr = getNextJob(type);
+                        if(0 < descr.length())
+                        {
+                             out.write(type + ":" + descr + "\n");
+                        }
+                    } while(null != descr);
+                }
+                out.flush();
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+            finally
+            {
+                if(null != out)
+                {
+                    try
+                    {
+                        out.close();
+                    }
+                    catch (IOException e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+            }
         }
     }
 

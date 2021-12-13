@@ -75,4 +75,10 @@ public class TextFileJobQueue extends BaseJobQueue
         System.out.println("Queue Type = single text file");
     }
 
+    @Override
+    public void close()
+    {
+        // not possible
+    }
+
 }

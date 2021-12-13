@@ -155,4 +155,10 @@ public class TextFileFolderJobQueue extends BaseJobQueue
         System.out.println("Queue Type = folder with text files");
     }
 
+    @Override
+    public void close()
+    {
+        // not possible
+    }
+
 }

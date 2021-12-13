@@ -10,19 +10,11 @@ import de.nomagic.RequestVersion2;
 public class ResultReporter
 {
     private HashMap<String, JobState> stat = new  HashMap<String, JobState>();
-    private FileWriter fw;
+    private FileWriter fw = null;
 
     public ResultReporter()
     {
-        try
-        {
-            fw = new FileWriter("results.txt", true);
-        }
-        catch (IOException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+
     }
 
     public void report(RequestVersion2 req)
@@ -35,6 +27,10 @@ public class ResultReporter
             state.setFromRequest(req);
             try
             {
+                if(null == fw)
+                {
+                    fw = new FileWriter("results.txt", true);
+                }
                 fw.append(state.getReport());
                 fw.flush();
             }

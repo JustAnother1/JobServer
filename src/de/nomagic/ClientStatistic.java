@@ -17,32 +17,35 @@ public class ClientStatistic
 
     public void printStatistsics()
     {
-        System.out.println("Client Name : Number of Jobs");
         int sum = 0;
         int sumAct = 0;
 
         SortedSet<String> keys = new TreeSet<>(stat.keySet());
-        for (String entryKey : keys)
+        if(0 < keys.size())
         {
-            Integer cnt = stat.get(entryKey);
-            Integer act = activity.get(entryKey);
-            // NULL => 0
-            if(null == cnt)
+            System.out.println("Client Name : Number of Jobs");
+            for (String entryKey : keys)
             {
-                cnt = 0;
+                Integer cnt = stat.get(entryKey);
+                Integer act = activity.get(entryKey);
+                // NULL => 0
+                if(null == cnt)
+                {
+                    cnt = 0;
+                }
+                if(null == act)
+                {
+                    act = 0;
+                }
+                String msg = String.format("%30s : %10d (%3d)", entryKey, cnt, act);
+                sum = sum + cnt;
+                sumAct = sumAct + act;
+                System.out.println(msg);
             }
-            if(null == act)
-            {
-                act = 0;
-            }
-            String msg = String.format("%30s : %10d (%3d)", entryKey, cnt, act);
-            sum = sum + cnt;
-            sumAct = sumAct + act;
-            System.out.println(msg);
+            System.out.println(new SimpleDateFormat("yyyy.MM.dd HH.mm.ss").format(new Date())
+                    + " : " + "total : " + sum + " (" + sumAct + ")");
+            System.out.println("End of List");
         }
-        System.out.println(new SimpleDateFormat("yyyy.MM.dd HH.mm.ss").format(new Date())
-                + " : " + "total : " + sum + " (" + sumAct + ")");
-        System.out.println("End of List");
         activity.clear();
     }
 

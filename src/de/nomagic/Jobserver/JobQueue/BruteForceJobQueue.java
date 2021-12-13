@@ -105,4 +105,15 @@ public class BruteForceJobQueue extends BaseJobQueue
         return res.trim();
     }
 
+    @Override
+    public void close()
+    {
+        System.out.println("Queue Type = Brute Force");
+        System.out.println("Type : " + jobType);
+        System.out.println("Jobs send out : " + JobsSendOut);
+        System.out.println("reached end : " + reachedEnd);
+        System.out.println("next key : "  + ArrayToHexString(curKey));
+        System.out.println("increment : "  + ArrayToHexString(inc));
+    }
+
 }
