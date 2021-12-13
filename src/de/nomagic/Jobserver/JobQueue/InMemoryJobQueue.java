@@ -34,7 +34,9 @@ public class InMemoryJobQueue extends BaseJobQueue
                 while(null != job)
                 {
                     String type = job.substring(0, job.indexOf(':'));
-                    String desc = job.substring(job.indexOf(':'));
+                    String desc = job.substring(job.indexOf(':') + 1);
+                    // System.out.println("type: " + type);
+                    // System.out.println("desc: " + desc);
                     addJob(type, desc);
                     job = list.readLine();
                 }
@@ -80,6 +82,10 @@ public class InMemoryJobQueue extends BaseJobQueue
         String res = jobs.get(0);
         jobs.remove(0);
         numJobs--;
+        if(null == res)
+        {
+            res = "";
+        }
         return res;
     }
 
@@ -169,15 +175,18 @@ public class InMemoryJobQueue extends BaseJobQueue
                 while(true == it.hasNext())
                 {
                     String type = it.next();
+                    System.out.println("Found type " + type);
                     String descr = null;
                     do {
                         descr = getNextJob(type);
                         if(0 < descr.length())
                         {
-                             out.write(type + ":" + descr + "\n");
+                            // System.out.println("saving type: " + type + " and descr: " + descr);
+                            out.write(type + ":" + descr + "\n");
                         }
-                    } while(null != descr);
+                    } while(0 < descr.length());
                 }
+                System.out.println("Found all Jobs");
                 out.flush();
             }
             catch (IOException e)
@@ -190,6 +199,7 @@ public class InMemoryJobQueue extends BaseJobQueue
                 {
                     try
                     {
+                        System.out.println("Closing file");
                         out.close();
                     }
                     catch (IOException e)

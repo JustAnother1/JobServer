@@ -292,6 +292,7 @@ public class JobServer extends Thread
             e.printStackTrace();
             return;
         }
+        System.out.println("Started Server on port " + ServerPort);
         long now = System.currentTimeMillis();
         long nextReport = now + REPORT_INTERVALL;
         while((false == isInterrupted()) && (true == shouldRun))
