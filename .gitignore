@@ -1,3 +1,5 @@
 bin/
 *.jar
 *.sh
+/target/
+/dependency-reduced-pom.xml
