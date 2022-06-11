@@ -23,7 +23,7 @@ public class JobServer
 
     private String JobFileName = "neu.txt";
     private String JobFolderName = ".";
-    private int ServerPort = 4321;
+    private int controlPort = 4321;
     private JobQueue jobs = null;
     private boolean shouldRun = true;
     private int numJobsSendOut = 0;
@@ -153,7 +153,7 @@ public class JobServer
         System.err.println("-jobdir <folder name>");
         System.err.println("     : read jobs from text files with .txt extension in the folder 'folder name'");
         System.err.println("-port <port number>");
-        System.err.println("     : use the given port instead of the default port " + ServerPort);
+        System.err.println("     : use the given port instead of the default port " + controlPort);
         System.err.println("-skip <number of jobs>");
         System.err.println("     : start executing jobs atthe defined position in the job list");
         System.err.println("-bf <type> <start value> <increment>");
@@ -188,7 +188,7 @@ public class JobServer
                 else if(true == "-port".equals(args[i]))
                 {
                     i++;
-                    ServerPort = Integer.parseInt(args[i]);
+                    controlPort = Integer.parseInt(args[i]);
                 }
                 else if(true == "-skip".equals(args[i]))
                 {
@@ -257,7 +257,7 @@ public class JobServer
     public void run()
     {
         ControlTask com = new ControlTask();
-        com.setPort(ServerPort);
+        com.setPort(controlPort);
         com.setServer(this);
         com.start();
         do {
@@ -277,6 +277,7 @@ public class JobServer
         jobs.close();
         System.out.println("Send out " + numJobsSendOut + " Jobs.");
         cs.printStatistsics();
+        shouldRun = false;
     }
 
     public static void main(String[] args)
@@ -287,5 +288,13 @@ public class JobServer
         m.run();
         System.out.println("Done!");
         System.exit(0);
+    }
+
+    public String getStatus()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Status of Jobserver:" + ControlConnectionTask.LINE_END);
+        sb.append("control interface on TCP port: " + controlPort + ControlConnectionTask.LINE_END);
+        return sb.toString();
     }
 }

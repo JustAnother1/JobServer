@@ -60,14 +60,28 @@ public class ControlConnectionTask extends Thread
     private String cmdHelp()
     {
         return "available commands:" + LINE_END
-                + "add - add a new task to the work queue" + LINE_END
                 + "exit - close this connection" + LINE_END
-                + "get - get result of task" + LINE_END
                 + "help - show this list of available commands" + LINE_END
-                + "kill - kills this worker" + LINE_END
-                + "list - list all queued or finished tasks" + LINE_END
-                + "status - show current state of worker thread" + LINE_END
-                + "version - show currently running client version" + LINE_END;
+                + "kill - kills this server" + LINE_END
+                + "status - show current state of server" + LINE_END;
+    }
+
+    private String cmdExit()
+    {
+        shouldRun = false;
+        return "Bye.";
+    }
+
+    private String cmdKill()
+    {
+        shouldRun = false;
+        jobServer.close();
+        return "I'm dying!!!!";
+    }
+
+    private String cmdStatus()
+    {
+        return jobServer.getStatus();
     }
 
     private String parse(String cmd) throws IOException
@@ -85,100 +99,11 @@ public class ControlConnectionTask extends Thread
         switch(cmd_parts[0])
         {
         case "help": return cmdHelp();
+        case "exit": return cmdExit();
+        case "kill": return cmdKill();
+        case "status": return cmdStatus();
 
-        default: return "invalid command : " + cmd + " !";
+        default: return "invalid command : " + cmd + " ! try help for list of available commands";
         }
-        /*
-        if(cmd_parts[0].startsWith("add"))
-        {
-            if(cmd_parts[0].length() > 1)
-            {
-                byte[] data = receiveFile();
-                if(data.length > 0)
-                {
-                    return "OK: received the job " + cmd_parts[1];
-                }
-                else
-                {
-                    return "ERROR: Failed to receive the job " + cmd_parts[1];
-                }
-            }
-            else
-            {
-                return "ERROR: task name missing !";
-            }
-        }
-        if(cmd_parts[0].startsWith("exit"))
-        {
-            shouldRun = false;
-            return "Bye.";
-        }
-        if(cmd_parts[0].startsWith("get"))
-        {
-            if(cmd_parts[0].length() > 1)
-            {
-                byte[] data = worker.get(cmd_parts[1]);
-                sendFile(data);
-                return "";
-            }
-            else
-            {
-                return "ERROR: task name missing !";
-            }
-        }
-        if(cmd_parts[0].startsWith("help"))
-        {
-
-        }
-        if(cmd_parts[0].startsWith("kill"))
-        {
-            shouldRun = false;
-            worker.kill();
-            return "I'm dying!!!!";
-        }
-        if(cmd_parts[0].startsWith("list"))
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Queued tasks:");
-            String[] queued = worker.getNamesOfQueuedJobs();
-            for(int i = 0; i < queued.length; i++)
-            {
-                sb.append(LINE_END);
-                sb.append(queued[i]);
-            }
-            sb.append(LINE_END);
-            sb.append("finished tasks:");
-            String[] finished = worker.getNamesOfFinishedJobs();
-            for(int i = 0; i < finished.length; i++)
-            {
-                sb.append(LINE_END);
-                sb.append(finished[i]);
-            }
-            return sb.toString();
-        }
-        if(cmd_parts[0].startsWith("status"))
-        {
-            return worker.getStatus();
-        }
-        if(cmd_parts[0].startsWith("version"))
-        {
-            return "" + VERSION;
-        }
-
-        return "invalid command : " + cmd + " !";
-        */
     }
-/*
-    private byte[] receiveFile()
-    {
-        // TODO Auto-generated method stub
-        return new byte[0];
-    }
-
-    private void sendFile(byte[] data) throws IOException
-    {
-        toServer.writeBytes("fileContentLength=" + data.length + ":" + LINE_END);
-        toServer.write(data, 0, data.length);
-    }
-    */
 }
