@@ -1,25 +1,25 @@
 package de.nomagic;
 
 import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-import de.nomagic.Jobserver.ResultReporter;
+import java.nio.charset.StandardCharsets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
+import ch.qos.logback.core.util.StatusPrinter;
 import de.nomagic.Jobserver.JobQueue.BruteForceJobQueue;
 import de.nomagic.Jobserver.JobQueue.InMemoryJobQueue;
 import de.nomagic.Jobserver.JobQueue.JobQueue;
 import de.nomagic.Jobserver.JobQueue.TextFileFolderJobQueue;
 import de.nomagic.Jobserver.JobQueue.TextFileJobQueue;
 
-public class JobServer extends Thread
+public class JobServer
 {
-    private final static long REPORT_INTERVALL = 30000;  // ms
-
+    private final Logger log = LoggerFactory.getLogger(this.getClass().getName());
 
     private String JobFileName = "neu.txt";
     private String JobFolderName = ".";
@@ -27,53 +27,119 @@ public class JobServer extends Thread
     private JobQueue jobs = null;
     private boolean shouldRun = true;
     private int numJobsSendOut = 0;
-    private DataOutputStream toClient = null;
     private ClientStatistic cs = new ClientStatistic();
-    private ResultReporter rr = new ResultReporter();
-    private ServerSocket welcomeSocket;
 
 
     public JobServer()
     {
     }
 
-    public static void main(String[] args)
+    private void startLogging(final String[] args)
     {
-        JobServer m = new JobServer();
-        m.getConfigFromCommandLine(args);
-
-        Runtime.getRuntime().addShutdownHook(
-            new Thread()
+        boolean colour = true;
+        int numOfV = 0;
+        for(int i = 0; i < args.length; i++)
+        {
+            if(true == "-v".equals(args[i]))
             {
-                public void run()
-                {
-                    System.out.println("Shutting down ...");
-                    m.close();
-                    m.shouldRun = false;
-                    try {
-                        Thread.sleep(200);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    try {
-                        m.welcomeSocket.close();
-                    } catch (IOException e1) {
-                        // TODO Auto-generated catch block
-                        e1.printStackTrace();
-                    }
-                    try {
-                        Thread.sleep(200);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    System.out.println("closed.");
-                }
+                numOfV ++;
             }
-        );
+            // -noColour
+            if(true == "-noColour".equals(args[i]))
+            {
+                colour = false;
+            }
+        }
 
-        m.start();
+        // configure Logging
+        switch(numOfV)
+        {
+        case 0: setLogLevel("warn", colour); break;
+        case 1: setLogLevel("debug", colour);break;
+        case 2:
+        default:
+            setLogLevel("trace", colour);
+            System.err.println("Build from " + getCommitID());
+            break;
+        }
+    }
+
+    public String getCommitID()
+    {
+        try
+        {
+            final InputStream s = JobServer.class.getResourceAsStream("/git.properties");
+            final BufferedReader in = new BufferedReader(new InputStreamReader(s));
+
+            String id = "";
+
+            String line = in.readLine();
+            while(null != line)
+            {
+                if(line.startsWith("git.commit.id.full"))
+                {
+                    id = line.substring(line.indexOf('=') + 1);
+                }
+                line = in.readLine();
+            }
+            in.close();
+            s.close();
+            return id;
+        }
+        catch( Exception e )
+        {
+            return e.toString();
+        }
+    }
+
+    private void setLogLevel(String LogLevel, boolean colour)
+    {
+        final LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+        try
+        {
+            final JoranConfigurator configurator = new JoranConfigurator();
+            configurator.setContext(context);
+            context.reset();
+            final String logCfg;
+            if(true == colour)
+            {
+                logCfg =
+                "<configuration>" +
+                  "<appender name='STDERR' class='ch.qos.logback.core.ConsoleAppender'>" +
+                  "<target>System.err</target>" +
+                    "<encoder>" +
+                       "<pattern>%highlight(%-5level) [%logger{36}] %msg%n</pattern>" +
+                    "</encoder>" +
+                  "</appender>" +
+                  "<root level='" + LogLevel + "'>" +
+                    "<appender-ref ref='STDERR' />" +
+                  "</root>" +
+                "</configuration>";
+            }
+            else
+            {
+                logCfg =
+                "<configuration>" +
+                  "<appender name='STDERR' class='ch.qos.logback.core.ConsoleAppender'>" +
+                  "<target>System.err</target>" +
+                    "<encoder>" +
+                      "<pattern>%-5level [%logger{36}] %msg%n</pattern>" +
+                    "</encoder>" +
+                  "</appender>" +
+                  "<root level='" + LogLevel + "'>" +
+                    "<appender-ref ref='STDERR' />" +
+                  "</root>" +
+                "</configuration>";
+            }
+            ByteArrayInputStream bin;
+            bin = new ByteArrayInputStream(logCfg.getBytes(StandardCharsets.UTF_8));
+            configurator.doConfigure(bin);
+        }
+        catch (JoranException je)
+        {
+          // StatusPrinter will handle this
+        }
+        StatusPrinter.printInCaseOfErrorsOrWarnings(context);
     }
 
     private void printHelpText()
@@ -144,6 +210,10 @@ public class JobServer extends Thread
                     printHelpText();
                     System.exit(0);
                 }
+                else if(true == "-v".equals(args[i]))
+                {
+                    // ignore as already handled.
+                }
                 else
                 {
                     System.err.println("Invalid Parameter : " + args[i]);
@@ -184,171 +254,22 @@ public class JobServer extends Thread
         }
     }
 
-    void parse_v1_request(String cmd) throws IOException
-    {
-        // Version 1:
-        if(true == "getNextJob".equals(cmd))
-        {
-            String job = jobs.getNextJob();
-            if(null == job)
-            {
-                System.out.println("No more Jobs available!");
-                shouldRun = false;
-            }
-            else
-            {
-                toClient.writeBytes(job);
-                numJobsSendOut++;
-                cs.addJob("Anonymous");
-            }
-        }
-        else if(true == cmd.startsWith("login:"))
-        {
-            String clientId = cmd.substring(6);
-            String job = jobs.getNextJob();
-            if(null == job)
-            {
-                System.out.println("No more Jobs available!");
-                shouldRun = false;
-            }
-            else
-            {
-                System.out.print(new SimpleDateFormat("HH.mm.ss").format(new Date())
-                        + " : " + numJobsSendOut
-                        + " : Giving Job to " + clientId + "\n");
-                toClient.writeBytes(job);
-                numJobsSendOut++;
-                cs.addJob(clientId);
-            }
-        }
-        else
-        {
-            // invalid command
-            toClient.writeBytes("ERROR: invalid Command !!!");
-        }
-    }
-
-    void parse_v2_request(String cmd) throws IOException
-    {
-        RequestVersion2 req = new RequestVersion2(cmd);
-        if(true == req.isAddJob())
-        {
-            // add a new Job
-            if(true == jobs.addJob(req.getType(), req.getJobSpec()))
-            {
-                System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
-                        + " : Received a new Job from " + req.getClientId());
-                System.out.println("Job Type = " + req.getType()  + " Spec : " + req.getJobSpec());
-                toClient.writeBytes("2:0:\n");
-            }
-            else
-            {
-                System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
-                        + " : Failed to add a new Job from " + req.getClientId());
-                System.out.println("Job Type = " + req.getType()  + " Spec : " + req.getJobSpec());
-                toClient.writeBytes("2:3:\n");
-            }
-        }
-        else if(true == req.isJobResult())
-        {
-            rr.report(req);
-            toClient.writeBytes("2:0:\n");
-        }
-        else
-        {
-            // finished last job?
-            rr.report(req);
-            // get next Job
-            String job = jobs.getNextJob();
-            if((null == job) || (1 > job.length()))
-            {
-                toClient.writeBytes("2:1:\n");
-            }
-            else
-            {
-                rr.nextJob(req, job);
-                toClient.writeBytes("2:0:" + job + "\n");
-                System.out.println(new SimpleDateFormat("HH.mm.ss").format(new Date())
-                        + " : " + numJobsSendOut +  " : Giving a Job to " + req.getClientId());
-                numJobsSendOut++;
-                cs.addJob(req.getClientId());
-            }
-        }
-    }
-
-    @Override
     public void run()
     {
-        // Startup
-
-        if(false == jobs.hasMoreJobs())
-        {
-            System.out.println("No Jobs available!");
-        }
-
-        try
-        {
-            welcomeSocket = new ServerSocket(ServerPort);
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-            return;
-        }
-        System.out.println("Started Server on port " + ServerPort);
-        long now = System.currentTimeMillis();
-        long nextReport = now + REPORT_INTERVALL;
-        while((false == isInterrupted()) && (true == shouldRun))
-        {
+        ControlTask com = new ControlTask();
+        com.setPort(ServerPort);
+        com.setServer(this);
+        com.start();
+        do {
             try
             {
-                final Socket connectionSocket = welcomeSocket.accept();
-                BufferedReader fromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-                toClient = new DataOutputStream(connectionSocket.getOutputStream());
-                String cmd = fromClient.readLine();
-                if(null != cmd)
-                {
-                    if(true == cmd.startsWith("2:"))
-                    {
-                        parse_v2_request(cmd);
-                    }
-                    else
-                    {
-                        // invalid command or V1
-                        parse_v1_request(cmd);
-                    }
-                    now = System.currentTimeMillis();
-                    if(now > nextReport)
-                    {
-                        nextReport = now + REPORT_INTERVALL;
-                        cs.printStatistsics();
-                        jobs.printStatistsics();
-                    }
-                }
-                toClient.flush();
-                connectionSocket.close();
+                Thread.sleep(100);
             }
-            catch(IOException e)
+            catch (InterruptedException e)
             {
-                if(true == shouldRun)
-                {
-                    e.printStackTrace();
-                }
+                // is OK
             }
-        }
-        try
-        {
-            welcomeSocket.close();
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-        }
-
-        // Shutdown
-        close();
-        System.out.println("Done!");
-        System.exit(0);
+        } while((true == shouldRun) && (com.isAlive()));
     }
 
     protected void close()
@@ -358,4 +279,13 @@ public class JobServer extends Thread
         cs.printStatistsics();
     }
 
+    public static void main(String[] args)
+    {
+        JobServer m = new JobServer();
+        m.startLogging(args);
+        m.getConfigFromCommandLine(args);
+        m.run();
+        System.out.println("Done!");
+        System.exit(0);
+    }
 }
