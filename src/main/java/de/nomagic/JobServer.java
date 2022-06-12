@@ -5,6 +5,8 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.LoggerContext;
@@ -28,7 +30,7 @@ public class JobServer
     private boolean shouldRun = true;
     private int numJobsSendOut = 0;
     private ClientStatistic cs = new ClientStatistic();
-
+    private HashMap<String, Worker> workers = new HashMap<String, Worker>();
 
     public JobServer()
     {
@@ -296,5 +298,34 @@ public class JobServer
         sb.append("Status of Jobserver:" + ControlConnectionTask.LINE_END);
         sb.append("control interface on TCP port: " + controlPort + ControlConnectionTask.LINE_END);
         return sb.toString();
+    }
+
+    public String listWorkers()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("List of all workers:");
+        sb.append(ControlConnectionTask.LINE_END);
+        for (String name : workers.keySet())
+        {
+            sb.append(name);
+            sb.append(ControlConnectionTask.LINE_END);
+        }
+        return sb.toString();
+    }
+
+    public String addWorker(String url)
+    {
+        Worker w = new Worker(url);
+        if(false == w.isValid())
+        {
+            return "ERROR: invalid URL " + url + " expected: somehost:54321";
+        }
+        if(false == w.connect())
+        {
+            return "ERROR: Could not connect to worker at " + url;
+        }
+        String name = w.getName();
+        workers.put(name, w);
+        return "added worker " + name;
     }
 }

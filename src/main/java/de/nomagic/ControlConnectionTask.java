@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 public class ControlConnectionTask extends Thread
 {
     private final Logger log = LoggerFactory.getLogger(this.getClass().getName());
-    public static final int VERSION = 1;
+
     public static final String LINE_END = "\r\n";
 
     private final Socket connectionSocket;
@@ -60,9 +60,11 @@ public class ControlConnectionTask extends Thread
     private String cmdHelp()
     {
         return "available commands:" + LINE_END
+                + "add worker host:port - add a new worker connection to this server" + LINE_END
                 + "exit - close this connection" + LINE_END
                 + "help - show this list of available commands" + LINE_END
                 + "kill - kills this server" + LINE_END
+                + "list workers - list all worker connections of this server" + LINE_END
                 + "status - show current state of server" + LINE_END;
     }
 
@@ -84,6 +86,16 @@ public class ControlConnectionTask extends Thread
         return jobServer.getStatus();
     }
 
+    private String cmdAddWorker(String url)
+    {
+        return jobServer.addWorker(url);
+    }
+
+    private String cmdListWorkers()
+    {
+        return jobServer.listWorkers();
+    }
+
     private String parse(String cmd) throws IOException
     {
         if(null == cmd)
@@ -102,6 +114,43 @@ public class ControlConnectionTask extends Thread
         case "exit": return cmdExit();
         case "kill": return cmdKill();
         case "status": return cmdStatus();
+        case "add":
+            if(cmd_parts.length > 1)
+            {
+                switch(cmd_parts[1])
+                {
+                case "worker":
+                    if(cmd_parts.length > 2)
+                    {
+                        return cmdAddWorker(cmd_parts[2]);
+                    }
+                    else
+                    {
+                         return "URL is missing from add worker command : " + cmd + " ! try help for list of available commands";
+                    }
+                default: return "invalid add command : " + cmd + " ! try help for list of available commands";
+                }
+            }
+            else
+            {
+                return "incomplete add command : " + cmd + " ! try help for list of available commands";
+            }
+            // end of add
+
+        case "list":
+            if(cmd_parts.length > 1)
+            {
+                switch(cmd_parts[1])
+                {
+                case "workers": return cmdListWorkers();
+                default: return "invalid add command : " + cmd + " ! try help for list of available commands";
+                }
+            }
+            else
+            {
+                return "incomplete add command : " + cmd + " ! try help for list of available commands";
+            }
+            // end of list
 
         default: return "invalid command : " + cmd + " ! try help for list of available commands";
         }
