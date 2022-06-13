@@ -23,13 +23,8 @@ public class JobServer
 {
     private final Logger log = LoggerFactory.getLogger(this.getClass().getName());
 
-    private String JobFileName = "neu.txt";
-    private String JobFolderName = ".";
     private int controlPort = 4321;
-    private JobQueue jobs = null;
     private boolean shouldRun = true;
-    private int numJobsSendOut = 0;
-    private ClientStatistic cs = new ClientStatistic();
     private HashMap<String, Worker> workers = new HashMap<String, Worker>();
 
     public JobServer()
@@ -150,62 +145,20 @@ public class JobServer
         System.err.println("===========");
         System.err.println("-h");
         System.err.println("     : This text");
-        System.err.println("-jobfile <file name>");
-        System.err.println("     : read jobs from text file 'file name'");
-        System.err.println("-jobdir <folder name>");
-        System.err.println("     : read jobs from text files with .txt extension in the folder 'folder name'");
         System.err.println("-port <port number>");
         System.err.println("     : use the given port instead of the default port " + controlPort);
-        System.err.println("-skip <number of jobs>");
-        System.err.println("     : start executing jobs atthe defined position in the job list");
-        System.err.println("-bf <type> <start value> <increment>");
-        System.err.println("     : scan a large key space increment by increment");
     }
 
     public void getConfigFromCommandLine(String[] args)
     {
-        String JobType = "";
-        String startValue = "";
-        String increment = "";
-        boolean isBruteForce = false;
-        boolean hasJobDir = false;
-        boolean hasJobFile = false;
-        long skip = 0;
         for(int i = 0; i < args.length; i++)
         {
             if(true == args[i].startsWith("-"))
             {
-                if(true == "-jobfile".equals(args[i]))
-                {
-                    hasJobFile = true;
-                    i++;
-                    JobFileName = args[i];
-                }
-                else if(true == "-jobdir".equals(args[i]))
-                {
-                    hasJobDir = true;
-                    i++;
-                    JobFolderName = args[i];
-                }
-                else if(true == "-port".equals(args[i]))
+                if(true == "-port".equals(args[i]))
                 {
                     i++;
                     controlPort = Integer.parseInt(args[i]);
-                }
-                else if(true == "-skip".equals(args[i]))
-                {
-                    i++;
-                    skip = Long.parseLong(args[i]);
-                }
-                else if(true == "-bf".equals(args[i]))
-                {
-                    i++;
-                    JobType = args[i];
-                    i++;
-                    startValue = args[i];
-                    i++;
-                    increment = args[i];
-                    isBruteForce = true;
                 }
                 else if(true == "-h".equals(args[i]))
                 {
@@ -230,30 +183,6 @@ public class JobServer
                 System.exit(1);
             }
         }
-
-        if(true == hasJobDir)
-        {
-            jobs = new TextFileFolderJobQueue(JobFolderName);
-        }
-        else if(true == hasJobFile)
-        {
-            jobs = new TextFileJobQueue(JobFileName);
-        }
-        else if(true == isBruteForce)
-        {
-            jobs = new BruteForceJobQueue(JobType, startValue, increment);
-        }
-        else
-        {
-            jobs = new InMemoryJobQueue();
-        }
-        if(0 < skip)
-        {
-            for(int i = 0; i < skip; i++)
-            {
-                jobs.getNextJob();
-            }
-        }
     }
 
     public void run()
@@ -276,9 +205,6 @@ public class JobServer
 
     protected void close()
     {
-        jobs.close();
-        System.out.println("Send out " + numJobsSendOut + " Jobs.");
-        cs.printStatistsics();
         shouldRun = false;
     }
 
