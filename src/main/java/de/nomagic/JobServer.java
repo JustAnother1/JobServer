@@ -13,11 +13,9 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.core.joran.spi.JoranException;
 import ch.qos.logback.core.util.StatusPrinter;
-import de.nomagic.Jobserver.JobQueue.BruteForceJobQueue;
-import de.nomagic.Jobserver.JobQueue.InMemoryJobQueue;
 import de.nomagic.Jobserver.JobQueue.JobQueue;
-import de.nomagic.Jobserver.JobQueue.TextFileFolderJobQueue;
-import de.nomagic.Jobserver.JobQueue.TextFileJobQueue;
+import de.nomagic.Jobserver.JobQueue.JobQueueManager;
+import de.nomagic.job.Job;
 
 public class JobServer
 {
@@ -25,7 +23,10 @@ public class JobServer
 
     private int controlPort = 4321;
     private boolean shouldRun = true;
-    private HashMap<String, Worker> workers = new HashMap<String, Worker>();
+
+    private JobQueueManager qm = new JobQueueManager();
+    private WorkerManager wm = new WorkerManager();
+    private JobManager jm = new JobManager();
 
     public JobServer()
     {
@@ -192,6 +193,28 @@ public class JobServer
         com.setServer(this);
         com.start();
         do {
+            // can we start work on a new Job?
+            Worker w = wm.getNextWorkerThatCanWork();
+            if(null != w)
+            {
+                String[] types = w.getSupportedJobTypes();
+                Job j = qm.getJobOfType(types);
+                if(null != j)
+                {
+                    w.startWorkingOn(j);
+                    jm.add(j, w);
+                }
+            }
+            // else no worker has time for a new job
+
+            // has a job finished?
+            jm.updateStatus();
+
+            // get finished Jobs
+            Job[] finished = jm.getFinishedJobs();
+            qm.updateFinishedJobs(finished);
+
+            // remove the following for better performance
             try
             {
                 Thread.sleep(100);
@@ -223,20 +246,25 @@ public class JobServer
         StringBuilder sb = new StringBuilder();
         sb.append("Status of Jobserver:" + ControlConnectionTask.LINE_END);
         sb.append("control interface on TCP port: " + controlPort + ControlConnectionTask.LINE_END);
+        sb.append(wm.getStatus());
+        sb.append(jm.getStatus());
+        sb.append(qm.getStatus());
         return sb.toString();
     }
 
     public String listWorkers()
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append("List of all workers:");
-        sb.append(ControlConnectionTask.LINE_END);
-        for (String name : workers.keySet())
-        {
-            sb.append(name);
-            sb.append(ControlConnectionTask.LINE_END);
-        }
-        return sb.toString();
+        return wm.listWorkers();
+    }
+
+    public String listActiveJobs()
+    {
+        return jm.listActiveJobs();
+    }
+
+    public String listQueues()
+    {
+        return qm.listQueues();
     }
 
     public String addWorker(String url)
@@ -251,7 +279,13 @@ public class JobServer
             return "ERROR: Could not connect to worker at " + url;
         }
         String name = w.getName();
-        workers.put(name, w);
+        wm.addWorker(name, w);
         return "added worker " + name;
     }
+
+    public String addQueue(String def)
+    {
+        return "not implemented";
+    }
+
 }

@@ -10,6 +10,8 @@ import java.net.UnknownHostException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.nomagic.job.Job;
+
 public class Worker
 {
     private final Logger log = LoggerFactory.getLogger(this.getClass().getName());
@@ -114,6 +116,17 @@ public class Worker
         isConnected = false;
     }
 
+    public String[] getSupportedJobTypes()
+    {
+        // TODO
+        return null;
+    }
+
+    public void startWorkingOn(Job j)
+    {
+        // TODO
+    }
+
     private boolean getNameFromHello(String hello)
     {
         // get name from hello
@@ -138,4 +151,5 @@ public class Worker
         workerName = name;
         return true;
     }
+
 }
